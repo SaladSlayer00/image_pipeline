@@ -28,10 +28,8 @@ jobs:
     # Add your steps to execute the application
     - name: Pull Images from S3 Bucket
       run: |
-        # Add the command to run your application here
-        # For example, if you have a Python script, you would run it like this:
         python image_pipeline.py
-        env:
-          HUGGINGFACE_HUB_TOKEN: ${{ secrets.HUGGINGFACE_HUB_TOKEN }}
+      env:
+        HUGGINGFACE_HUB_TOKEN: ${{ secrets.HUGGINGFACE_HUB_TOKEN }}
         
    
