@@ -108,3 +108,5 @@ def update_dataset(train_dir, test_dir, class_name):
     })
 
     updated_dataset_dict.push_to_hub('SaladSlayer00/twin_matcher')
+
+update_dataset(train_dir, test_dir, class_name)
