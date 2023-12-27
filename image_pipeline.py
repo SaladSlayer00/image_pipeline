@@ -6,6 +6,11 @@ import shutil
 import random
 from PIL import Image
 
+hf_token = os.environ.get('HUGGINGFACE_HUB_TOKEN')
+if hf_token:
+    HfFolder.save_token(hf_token)  # This will save the token for later use by Hugging Face libraries
+else:
+    raise ValueError("Hugging Face token not found. Make sure it is passed as an environment variable.")
 
 def extract_class_name_from_folder(key):
     class_name = key.split('/')[0]
