@@ -44,7 +44,7 @@ def download_images(bucket_name):
 
 local_directory, class_name = download_images('imagefilessml')
 
-def split_train_test(image_dir, train_ratio=0.7):
+def split_train_test(image_dir, train_ratio=0.9):
     # Creating paths for train and test directories within image_dir
     train_dir = os.path.join(image_dir, 'train')
     test_dir = os.path.join(image_dir, 'test')
