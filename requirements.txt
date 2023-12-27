@@ -1,4 +1,4 @@
 boto3
 datasets
 huggingface_hub
-PIL
+Pillow
