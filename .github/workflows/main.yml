@@ -32,6 +32,6 @@ jobs:
         # For example, if you have a Python script, you would run it like this:
         python image_pipeline.py
         env:
-          HUGGINGFACE_HUB_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+          HUGGINGFACE_HUB_TOKEN: ${{ secrets.HUGGINGFACE_HUB_TOKEN }}
         
    
