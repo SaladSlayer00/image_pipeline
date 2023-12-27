@@ -1,7 +1,10 @@
 import boto3
 import os
-from datasets import load_dataset, load_metric, Image, DatasetDict, Dataset, load_from_disk, 
+from datasets import load_dataset, load_metric, Image, DatasetDict, Dataset, load_from_disk, concatenate_datasets
 from huggingface_hub import HfApi, Repository
+import shutil
+import random
+from PIL import Image
 
 hf_token = os.environ.get('HUGGINGFACE_HUB_TOKEN')
 if hf_token:
@@ -9,120 +12,99 @@ if hf_token:
 else:
     raise ValueError("Hugging Face token not found. Make sure it is passed as an environment variable.")
 
+def extract_class_name_from_folder(key):
+    class_name = key.split('/')[0]
+    return class_name
+
 def download_images(bucket_name):
     s3 = boto3.client('s3')
     print(f"Connecting to bucket: {bucket_name}")
     response = s3.list_objects_v2(Bucket=bucket_name)
 
-    directory_created = False
-    local_directory = ""
-
     if 'Contents' in response:
         print(f"Found {len(response['Contents'])} objects in bucket.")
         for obj in response['Contents']:
-            print(f"Checking object: {obj['Key']}")
-            if obj['Key'].endswith('.jpg') or obj['Key'].endswith('.png'):  # Add more image formats if needed
-                print(f"Found image: {obj['Key']}")
-                if not directory_created:
-                    # Extract the file name without the extension
-                    image_name = os.path.splitext(obj['Key'])[0]
-                    local_directory = image_name
-                    if not os.path.exists(local_directory):
-                        print(f"Creating directory: {local_directory}")
-                        os.makedirs(local_directory)
-                    directory_created = True
+            class_name = extract_class_name_from_folder(key)
+            key = obj['Key']
+            print(f"Checking object: {key}")
+            if key.endswith('.jpg') or key.endswith('.png'):  # Add more image formats if needed
+                # Extract folder name and create directory if it doesn't exist
+                directory = os.path.dirname(key)
+                if directory and not os.path.exists(directory):
+                    print(f"Creating directory: {directory}")
+                    os.makedirs(directory)
 
                 # Download the file
-                print(f"Downloading image to {local_directory}/{obj['Key']}")
-                s3.download_file(bucket_name, obj['Key'], os.path.join(local_directory, obj['Key']))
+                print(f"Downloading image to {key}")
+                s3.download_file(bucket_name, key, key)
     else:
         print("No contents found in bucket.")
+        
+    return directory, class_name
 
-# Replace 'your-bucket-name' with your actual S3 bucket name
-download_images('imagefilessml')
-
-import shutil
-import random
+local_directory, class_name = download_images('imagefilessml')
 
 def split_train_test(image_dir, train_ratio=0.7):
-    # Make sure the train and test directories exist
+    # Creating paths for train and test directories within image_dir
     train_dir = os.path.join(image_dir, 'train')
     test_dir = os.path.join(image_dir, 'test')
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True)
 
-    # Get all image filenames
     all_images = [f for f in os.listdir(image_dir) if f.endswith('.jpg') or f.endswith('.png')]
 
-    # Shuffle the list for random split
     random.shuffle(all_images)
 
-    # Calculate the split index
     split_index = int(len(all_images) * train_ratio)
 
-    # Split the images
     train_images = all_images[:split_index]
     test_images = all_images[split_index:]
 
-    # Move the images to the respective directories
     for image in train_images:
-        shutil.move(os.path.join(image_dir, image), train_dir)
+        shutil.move(os.path.join(image_dir, image), os.path.join(train_dir, image))
     
     for image in test_images:
-        shutil.move(os.path.join(image_dir, image), test_dir)
-        
+        shutil.move(os.path.join(image_dir, image), os.path.join(test_dir, image))
+
     return train_dir, test_dir
 
-# Call the function
-train_dir, test_dir = split_train_test(local_directory)  # Replace local_directory with the directory where images are downloaded
+train_dir, test_dir = split_train_test(local_directory)
+
+def load_image(image_path):
+    with Image.open(image_path) as img:
+        return img.convert('RGB')  # Ensuring all images are in RGB format
 
 
-# Function to create the dataset
-def create_dataset(image_dir):
-    # Store the data in this dictionary
-    data = {'image': [], 'label': []}
+def update_dataset(train_dir, test_dir, class_name):
+    dataset = load_dataset("SaladSlayer00/twin_matcher")
 
-    # List the directories in the image_dir
-    for label in os.listdir(image_dir):
-        # Skip hidden directories or files
-        if label.startswith('.'):
-            continue
+    new_train_data = []
+    for filename in os.listdir(train_dir):
+        if filename.endswith('.jpg') or filename.endswith('.png'):
+            image_path = os.path.join(train_dir, filename)
+            image = load_image(image_path)
+            new_train_data.append({'image': image, 'label': class_name})
 
-        class_dir = os.path.join(image_dir, label)
+    new_train_dataset = Dataset.from_dict({'image': [item['image'] for item in new_train_data], 
+                                           'label': [item['label'] for item in new_train_data]},
+                                           features=dataset['train'].features)
+    updated_train_dataset = concatenate_datasets([dataset['train'], new_train_dataset])
 
-        # Ensure it's a directory
-        if not os.path.isdir(class_dir):
-            continue
+    new_test_data = []
+    for filename in os.listdir(test_dir):
+        if filename.endswith('.jpg') or filename.endswith('.png'):
+            image_path = os.path.join(test_dir, filename)
+            image = load_image(image_path)
+            new_test_data.append({'image': image, 'label': class_name})
 
-        # List the images in the class_dir
-        for image_name in os.listdir(class_dir):
-            # Skip hidden files
-            if image_name.startswith('.'):
-                continue
+    new_test_dataset = Dataset.from_dict({'image': [item['image'] for item in new_test_data], 
+                                          'label': [item['label'] for item in new_test_data]},
+                                          features=dataset['test'].features)
+    updated_test_dataset = concatenate_datasets([dataset['test'], new_test_dataset])
 
-            # Get the image path
-            image_path = os.path.join(class_dir, image_name)
-            # Add the image and label to the data dictionary
-            data['image'].append(image_path)
-            data['label'].append(label)
+    updated_dataset_dict = DatasetDict({
+        'train': updated_train_dataset,
+        'test': updated_test_dataset
+    })
 
-    # Create a dataset from the data dictionary
-    dataset = Dataset.from_dict(data)
-    # Cast the 'image' column to the Image feature type
-    dataset = dataset.cast_column('image', Image())
-    return dataset
-
-# Create the datasets
-train_dataset = create_dataset(train_dir)
-test_dataset = create_dataset(test_dir)
-
-# Create a DatasetDict
-dataset_dict = DatasetDict({
-    'train': train_dataset,
-    'test': test_dataset
-})
-
-
-# After creating the dataset, you can save it with
-dataset_dict.push_to_hub('SaladSlayer00/twin_matcher')
-
+    updated_dataset_dict.push_to_hub('SaladSlayer00/twin_matcher')
