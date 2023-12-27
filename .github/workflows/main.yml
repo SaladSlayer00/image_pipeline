@@ -30,12 +30,8 @@ jobs:
       run: |
         # Add the command to run your application here
         # For example, if you have a Python script, you would run it like this:
-        python your-script.py
+        python image_pipeline.py
+        env:
+          HUGGINGFACE_HUB_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         
-    - name: Commit and Push
-      run: |
-        git config --global user.name 'SaladSlayer00'
-        git config --global user.email 'trisbeatris@gmail.com'
-        git add -A
-        git commit -m "Automated commit - Add images from S3"
-        git push 
+   
