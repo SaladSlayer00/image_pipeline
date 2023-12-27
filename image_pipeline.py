@@ -1,7 +1,7 @@
 import boto3
 import os
 from datasets import load_dataset, load_metric, Image, DatasetDict, Dataset, load_from_disk, concatenate_datasets
-from huggingface_hub import HfApi, Repository
+from huggingface_hub import HfApi, Repository, HfFolder
 import shutil
 import random
 from PIL import Image
