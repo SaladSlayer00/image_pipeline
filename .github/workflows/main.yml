@@ -3,7 +3,7 @@ name: Pull Images from S3
 on:
   schedule:
     # Runs every 5 minutes
-    - cron: '*/5 * * * *'
+    - cron: '0 16 1 * *'
 
 jobs:
   pull-images:
