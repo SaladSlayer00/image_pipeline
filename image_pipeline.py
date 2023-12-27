@@ -19,8 +19,8 @@ def download_images(bucket_name):
     if 'Contents' in response:
         print(f"Found {len(response['Contents'])} objects in bucket.")
         for obj in response['Contents']:
-            class_name = extract_class_name_from_folder(key)
             key = obj['Key']
+            class_name = extract_class_name_from_folder(key)
             print(f"Checking object: {key}")
             if key.endswith('.jpg') or key.endswith('.png'):  # Add more image formats if needed
                 # Extract folder name and create directory if it doesn't exist
