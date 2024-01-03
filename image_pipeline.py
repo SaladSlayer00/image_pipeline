@@ -42,7 +42,7 @@ def download_images(bucket_name):
         
     return directory, class_name
 
-local_directory, class_name = download_images('imagefilessml')
+local_directory, class_name = download_images('newimagesupload00')
 
 def split_train_test(image_dir, train_ratio=0.9):
     # Creating paths for train and test directories within image_dir
