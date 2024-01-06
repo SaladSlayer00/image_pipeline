@@ -76,7 +76,7 @@ def load_image(image_path):
 
 
 def update_dataset(train_dir, test_dir, class_name):
-    dataset = load_dataset("SaladSlayer00/twin_matcher")
+    dataset = load_dataset("SaladSlayer00/twin_matcher_data")
 
     new_train_data = []
     for filename in os.listdir(train_dir):
